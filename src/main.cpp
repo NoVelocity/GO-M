@@ -6,19 +6,13 @@
 #include <JsonUtility.h>
 
 static constexpr uint8_t
-        STEPPER_1_ENA = OUT2,
-        STEPPER_1_IN1 = OUT1,
-        STEPPER_1_IN2 = OUT4,
-        STEPPER_1_IN3 = OUT3,
-        STEPPER_1_IN4 = OUT6,
-        STEPPER_1_ENB = OUT5,
+        STEPPER_1_ENA = OUT1,
+        STEPPER_1_STEP = OUT2,
+        STEPPER_1_DIR = OUT3,
 
-        STEPPER_2_ENA = IN5,
-        STEPPER_2_IN1 = IN6,
-        STEPPER_2_IN2 = IN3,
-        STEPPER_2_IN3 = IN4,
-        STEPPER_2_IN4 = IN1,
-        STEPPER_2_ENB = IN2;
+        STEPPER_2_ENA = IN1,
+        STEPPER_2_STEP = IN2,
+        STEPPER_2_DIR = IN3;
 
 CMC *cmc;
 bool isInit = false;
@@ -27,10 +21,10 @@ void setup() {
     cmc = new CMC(
         Serial1, Serial2,
         CMStepper(
-            STEPPER_1_ENA, STEPPER_1_IN1, STEPPER_1_IN2, STEPPER_1_IN3, STEPPER_1_IN4, STEPPER_1_ENB
+            STEPPER_1_ENA, STEPPER_1_STEP, STEPPER_1_DIR
         ),
         CMStepper(
-            STEPPER_2_ENA, STEPPER_2_IN1, STEPPER_2_IN2, STEPPER_2_IN3, STEPPER_2_IN4, STEPPER_2_ENB
+            STEPPER_2_ENA, STEPPER_2_STEP, STEPPER_2_DIR
         )
     );
 }
