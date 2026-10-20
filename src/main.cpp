@@ -13,12 +13,12 @@ static constexpr uint8_t
         STEPPER_1_IN4 = OUT6,
         STEPPER_1_ENB = OUT5,
 
-        STEPPER_2_ENA = IN2,
-        STEPPER_2_IN1 = IN1,
-        STEPPER_2_IN2 = IN4,
-        STEPPER_2_IN3 = IN3,
-        STEPPER_2_IN4 = IN6,
-        STEPPER_2_ENB = IN5;
+        STEPPER_2_ENA = IN5,
+        STEPPER_2_IN1 = IN6,
+        STEPPER_2_IN2 = IN3,
+        STEPPER_2_IN3 = IN4,
+        STEPPER_2_IN4 = IN1,
+        STEPPER_2_ENB = IN2;
 
 CMC *cmc;
 bool isInit = false;
