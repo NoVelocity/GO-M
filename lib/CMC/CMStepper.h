@@ -3,6 +3,7 @@
 #define CMSTEPPER_H
 
 #include <Arduino.h>
+#include <AccelStepper.h>
 
 enum CMStepperMode {
     MODE_STOP = 0,
@@ -13,50 +14,53 @@ enum CMStepperMode {
 class CMStepper {
 public:
     static constexpr int DEFAULT_STEP_DELAY = 5;
-
-private:
     static constexpr uint8_t NO_ENABLE_PIN = 255;
 
-    const uint8_t pinSTEP;
-    const uint8_t pinDIR;
-    const uint8_t pinENA;
+private:
+    AccelStepper motor;
 
+    const uint8_t pinENA;
     bool state = false;
     bool enableActiveLow = true;
-    bool directionInverted = false;
 
     CMStepperMode mode = MODE_STOP;
+    long targetPosition = 0;
     int stepsCount = 0;
     int stepDelay = DEFAULT_STEP_DELAY;
 
+    float maxSpeed = 1000.0f / DEFAULT_STEP_DELAY;
+    float acceleration = 500.0f;
+
     void updateHardware();
-    void step(bool isForwardDirection);
+    void updateSpeed();
 
 public:
-    // ENA необязателен: можно оставить неподключённым.
+    // TB6600: STEP, DIR, optional ENA
     CMStepper(uint8_t pinSTEP,
               uint8_t pinDIR,
               uint8_t pinENA = NO_ENABLE_PIN);
 
     void begin();
 
-    // State
     void enable();
     void disable();
     void switchState();
     bool getState() const;
     void setState(bool newState);
 
-    // Driver configuration
     void setEnableActiveLow(bool activeLow);
     void setDirectionInverted(bool inverted);
 
-    // Step delay, milliseconds between pulses
     void setStepDelay(int newDelay);
     int getStepDelay() const;
     void resetStepDelay();
 
-    // Steps
+    void setMaxSpeed(float speed);
+    float getMaxSpeed() const;
+
+    void setAcceleration(float value);
+    float getAcceleration() const;
+
     void stepFor(int stepCount);
     void stepUntil(bool isBackwardDirection);
 
@@ -66,6 +70,9 @@ public:
 
     void stopStepper();
     void doStep();
+
+    long currentPosition() const;
+    void setCurrentPosition(long position);
 };
 
 #endif // CMSTEPPER_H
