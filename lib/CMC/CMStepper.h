@@ -1,9 +1,7 @@
-//
-// Created by Robo_Start on 24.07.2026.
-//
 
 #ifndef CMSTEPPER_H
 #define CMSTEPPER_H
+
 #include <Arduino.h>
 
 enum CMStepperMode {
@@ -12,76 +10,62 @@ enum CMStepperMode {
     MODE_UNTIL = 2
 };
 
-enum CMStepperPhase {
-    STEP_1 = 0,
-    STEP_2 = 1,
-    STEP_3 = 2,
-    STEP_4 = 3
-};
-
 class CMStepper {
 public:
     static constexpr int DEFAULT_STEP_DELAY = 5;
 
 private:
-    const uint8_t
-            pinENA,
-            pinIN1,
-            pinIN2,
-            pinIN3,
-            pinIN4,
-            pinENB;
+    static constexpr uint8_t NO_ENABLE_PIN = 255;
+
+    const uint8_t pinSTEP;
+    const uint8_t pinDIR;
+    const uint8_t pinENA;
 
     bool state = false;
+    bool enableActiveLow = true;
+    bool directionInverted = false;
 
     CMStepperMode mode = MODE_STOP;
-    CMStepperPhase phase = STEP_1;
     int stepsCount = 0;
-
     int stepDelay = DEFAULT_STEP_DELAY;
 
-    void updateHardware() const;
-
+    void updateHardware();
     void step(bool isForwardDirection);
 
 public:
-    CMStepper(uint8_t pinENA, uint8_t pinIN1, uint8_t pinIN2, uint8_t pinIN3, uint8_t pinIN4, uint8_t pinENB);
+    // ENA необязателен: можно оставить неподключённым.
+    CMStepper(uint8_t pinSTEP,
+              uint8_t pinDIR,
+              uint8_t pinENA = NO_ENABLE_PIN);
 
-    void begin() const;
+    void begin();
 
     // State
     void enable();
-
     void disable();
-
     void switchState();
-
     bool getState() const;
-
     void setState(bool newState);
 
-    // Step delay
+    // Driver configuration
+    void setEnableActiveLow(bool activeLow);
+    void setDirectionInverted(bool inverted);
+
+    // Step delay, milliseconds between pulses
     void setStepDelay(int newDelay);
-
     int getStepDelay() const;
-
     void resetStepDelay();
 
     // Steps
     void stepFor(int stepCount);
-
     void stepUntil(bool isBackwardDirection);
 
     CMStepperMode getStepperMode() const;
-
     int getStepsCount() const;
-
     int getStepsCountAbsolute() const;
 
     void stopStepper();
-
     void doStep();
 };
 
-
-#endif //CMSTEPPER_H
+#endif // CMSTEPPER_H

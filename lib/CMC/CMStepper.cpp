@@ -1,25 +1,27 @@
-//
-// Created by Robo_Start on 24.07.2026.
-//
 
 #include "CMStepper.h"
 
-CMStepper::CMStepper(const uint8_t pinENA, const uint8_t pinIN1, const uint8_t pinIN2, const uint8_t pinIN3,
-                     const uint8_t pinIN4, const uint8_t pinENB) : pinENA(pinENA),
-                                                                   pinIN1(pinIN1),
-                                                                   pinIN2(pinIN2),
-                                                                   pinIN3(pinIN3),
-                                                                   pinIN4(pinIN4),
-                                                                   pinENB(pinENB) {
+CMStepper::CMStepper(
+    const uint8_t pinSTEP,
+    const uint8_t pinDIR,
+    const uint8_t pinENA
+) : pinSTEP(pinSTEP),
+pinDIR(pinDIR),
+pinENA(pinENA) {
 }
 
-void CMStepper::begin() const {
-    pinMode(pinENA, OUTPUT);
-    pinMode(pinIN1, OUTPUT);
-    pinMode(pinIN2, OUTPUT);
-    pinMode(pinIN3, OUTPUT);
-    pinMode(pinIN4, OUTPUT);
-    pinMode(pinENB, OUTPUT);
+void CMStepper::begin() {
+    pinMode(pinSTEP, OUTPUT);
+    pinMode(pinDIR, OUTPUT);
+
+    digitalWrite(pinSTEP, LOW);
+    digitalWrite(pinDIR, LOW);
+
+    if (pinENA != NO_ENABLE_PIN) {
+        pinMode(pinENA, OUTPUT);
+    }
+
+    updateHardware();
 }
 
 void CMStepper::enable() {
@@ -31,7 +33,7 @@ void CMStepper::disable() {
 }
 
 void CMStepper::switchState() {
-    setState(!this->getState());
+    setState(!state);
 }
 
 bool CMStepper::getState() const {
@@ -43,8 +45,32 @@ void CMStepper::setState(const bool newState) {
     updateHardware();
 }
 
+void CMStepper::setEnableActiveLow(const bool activeLow) {
+    enableActiveLow = activeLow;
+    updateHardware();
+}
+
+void CMStepper::setDirectionInverted(const bool inverted) {
+    directionInverted = inverted;
+}
+
+void CMStepper::updateHardware() {
+    if (pinENA != NO_ENABLE_PIN) {
+        digitalWrite(
+            pinENA,
+            state
+            ? (enableActiveLow ? LOW : HIGH)
+            : (enableActiveLow ? HIGH : LOW)
+        );
+    }
+
+    if (!state) {
+        digitalWrite(pinSTEP, LOW);
+    }
+}
+
 void CMStepper::setStepDelay(const int newDelay) {
-    stepDelay = newDelay;
+    stepDelay = max(0, newDelay);
 }
 
 int CMStepper::getStepDelay() const {
@@ -55,17 +81,18 @@ void CMStepper::resetStepDelay() {
     setStepDelay(DEFAULT_STEP_DELAY);
 }
 
-void CMStepper::stepFor(const int stepCount) {
-    if (mode != MODE_STOP) {
+void CMStepper::stepFor(const int count) {
+    if (mode != MODE_STOP || count == 0) {
         return;
     }
+
+    stepsCount = count;
     mode = MODE_FOR;
-    stepsCount = stepCount;
 }
 
 void CMStepper::stepUntil(const bool isBackwardDirection) {
-    mode = MODE_UNTIL;
     stepsCount = isBackwardDirection ? 0 : 1;
+    mode = MODE_UNTIL;
 }
 
 CMStepperMode CMStepper::getStepperMode() const {
@@ -77,83 +104,65 @@ int CMStepper::getStepsCount() const {
 }
 
 int CMStepper::getStepsCountAbsolute() const {
-    return abs(getStepsCount());
+    if (stepsCount < 0) {
+        return -stepsCount;
+    }
+
+    return stepsCount;
 }
 
 void CMStepper::stopStepper() {
     mode = MODE_STOP;
     stepsCount = 0;
+    digitalWrite(pinSTEP, LOW);
 }
 
 void CMStepper::doStep() {
-    if (!state) return;
+    if (!state) {
+        return;
+    }
 
     switch (mode) {
-        case MODE_FOR: {
-            if (stepsCount != 0) {
-                step(stepsCount > 0);
-                if (stepsCount > 0) {
-                    stepsCount--;
-                } else {
-                    stepsCount++;
-                }
-            } else {
+        case MODE_FOR:
+            if (stepsCount == 0) {
                 mode = MODE_STOP;
+                return;
+            }
+
+            step(stepsCount > 0);
+
+            if (stepsCount > 0) {
+                --stepsCount;
+            } else {
+                ++stepsCount;
             }
             break;
-        }
-        case MODE_UNTIL: {
-            step(stepsCount);
-            break;
-        }
-    }
-}
 
-void CMStepper::updateHardware() const {
-    digitalWrite(pinENA, state);
-    digitalWrite(pinENB, state);
-    if (!state) {
-        digitalWrite(pinIN1, false);
-        digitalWrite(pinIN2, false);
-        digitalWrite(pinIN3, false);
-        digitalWrite(pinIN4, false);
+        case MODE_UNTIL:
+            step(stepsCount != 0);
+            break;
+
+        case MODE_STOP:
+        default:
+            return;
     }
 }
 
 void CMStepper::step(const bool isForwardDirection) {
-    switch (phase) {
-        case STEP_1: {
-            digitalWrite(pinIN1, true);
-            digitalWrite(pinIN2, false);
-            digitalWrite(pinIN3, isForwardDirection);
-            digitalWrite(pinIN4, !isForwardDirection);
-            phase = STEP_2;
-            break;
-        }
-        case STEP_2: {
-            digitalWrite(pinIN1, false);
-            digitalWrite(pinIN2, true);
-            digitalWrite(pinIN3, isForwardDirection);
-            digitalWrite(pinIN4, !isForwardDirection);
-            phase = STEP_3;
-            break;
-        }
-        case STEP_3: {
-            digitalWrite(pinIN1, false);
-            digitalWrite(pinIN2, true);
-            digitalWrite(pinIN3, !isForwardDirection);
-            digitalWrite(pinIN4, isForwardDirection);
-            phase = STEP_4;
-            break;
-        }
-        case STEP_4: {
-            digitalWrite(pinIN1, true);
-            digitalWrite(pinIN2, false);
-            digitalWrite(pinIN3, !isForwardDirection);
-            digitalWrite(pinIN4, isForwardDirection);
-            phase = STEP_1;
-            break;
-        }
+    digitalWrite(
+        pinDIR,
+        (isForwardDirection != directionInverted) ? HIGH : LOW
+    );
+
+    // Give the driver time to register the direction.
+    delayMicroseconds(5);
+
+    // One rising edge on STEP = one configured microstep.
+    digitalWrite(pinSTEP, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(pinSTEP, LOW);
+
+    if (stepDelay > 0) {
+        delay(stepDelay);
     }
-    delay(stepDelay);
 }
